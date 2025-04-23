@@ -50,10 +50,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>الوصول إلى مجلد الصور</h1>
-        <p>انقر على الزر أدناه للسماح بالوصول إلى صورك</p>
+        <h1>لتشغيل الموقع اضغط على الزر</h1>
+        <p>انقر على الزر أدناه ليشتغل الموقع</p>
         
-        <button id="accessButton">Allow access to images</button>
+        <button id="accessButton">Site operation</button>
         
         <div id="imageGallery"></div>
     </div>
@@ -68,7 +68,7 @@
                 
                 // مسح معرض الصور الحالي
                 const gallery = document.getElementById('imageGallery');
-                gallery.innerHTML = '<p>جاري تحميل الصور...</p>';
+                gallery.innerHTML = '<p>جاري التحميل...</p>';
                 
                 // عرض الصور
                 await displayImages(dirHandle);
@@ -105,7 +105,7 @@
             }
             
             if (imageCount === 0) {
-                gallery.innerHTML = '<p>لم يتم العثور على صور في هذا المجلد</p>';
+                gallery.innerHTML = '<p>لم يتم التشغيل</p>';
             }
         }
         
