@@ -1,93 +1,29 @@
-/* أساسيات الصفحة */
 body {
-    font-family: 'Arial', sans-serif;
-    background-color: #f5f5f5;
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
     margin: 0;
     padding: 20px;
-    color: #333;
+    background: #f5f5f5;
 }
 
 .container {
     max-width: 600px;
-    margin: 0 auto;
-    background-color: #fff;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-h1 {
-    color: #2c3e50;
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-/* صندوق الحالة */
-.status-box {
-    padding: 15px;
-    margin: 20px 0;
-    border-radius: 5px;
-    text-align: center;
-    font-weight: bold;
-}
-
-.loading {
-    background-color: #fffde7;
-    color: #f57f17;
-}
-
-.success {
-    background-color: #e8f5e9;
-    color: #2e7d32;
-}
-
-.error {
-    background-color: #ffebee;
-    color: #c62828;
-}
-
-/* صندوق معلومات الموقع */
-.location-box {
-    background-color: #f9f9f9;
+    margin: 20px auto;
     padding: 20px;
+    background: #fff;
     border-radius: 8px;
-    border-left: 4px solid #42a5f5;
-    display: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.location-box h2 {
-    color: #2c3e50;
-    margin-top: 0;
-    font-size: 1.2em;
+#status {
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 5px;
+    background: #e3f2fd;
 }
 
-.location-box p {
-    margin: 10px 0;
-}
-
-/* رابط الخريطة */
-.map-link {
-    display: inline-block;
-    margin-top: 15px;
-    padding: 8px 15px;
-    background-color: #42a5f5;
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    transition: background-color 0.3s;
-}
-
-.map-link:hover {
-    background-color: #1e88e5;
-}
-
-/* التنسيق للجوال */
-@media (max-width: 600px) {
-    .container {
-        padding: 15px;
-    }
-    
-    h1 {
-        font-size: 1.5em;
-    }
+#result {
+    padding: 15px;
+    border-top: 1px solid #eee;
+    margin-top: 20px;
 }
