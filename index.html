@@ -1,86 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>إرسال الموقع إلى تليجرام</title>
-    <style>
-        body { font-family: Arial; text-align: center; padding: 20px; }
-        #status { padding: 10px; margin: 10px; border-radius: 5px; }
-        .success { background-color: #e8f5e9; }
-        .error { background-color: #ffebee; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إرسال الموقع للبوت</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h2>إرسال الموقع الجغرافي</h2>
-    <div id="status">جاري التحميل...</div>
-
-    <script>
-        const statusDiv = document.getElementById('status');
-        const BOT_TOKEN = '7540998214:AAEysEoXCj5XHlQzVG3-yETXNk6WdeZ9Yc0';
-
-        // طلب الموقع عند تحميل الصفحة
-        window.onload = () => {
-            if (!navigator.geolocation) {
-                showError("المتصفح لا يدعم خدمة الموقع");
-                return;
-            }
-            
-            statusDiv.textContent = "جاري طلب الإذن...";
-            navigator.geolocation.getCurrentPosition(
-                sendLocationToTelegram,
-                (err) => showError(getErrorMsg(err)),
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
-        };
-
-        // إرسال الموقع إلى تليجرام
-        async function sendLocationToTelegram(position) {
-            try {
-                statusDiv.textContent = "جاري الإرسال...";
-                
-                const { latitude, longitude } = position.coords;
-                const mapUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
-                const message = `📍 موقع جديد:\n- خط العرض: ${latitude}\n- خط الطول: ${longitude}\n- الرابط: ${mapUrl}`;
-                
-                const response = await fetch(
-                    `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            chat_id: "", // اتركه فارغاً للإرسال إلى دردشة البوت
-                            text: message
-                        })
-                    }
-                );
-                
-                const data = await response.json();
-                if (data.ok) {
-                    statusDiv.textContent = "✅ تم الإرسال بنجاح إلى تليجرام!";
-                    statusDiv.className = "success";
-                } else {
-                    throw new Error(data.description || "فشل الإرسال");
-                }
-            } catch (error) {
-                showError(`خطأ: ${error.message}`);
-                console.error("Error:", error);
-            }
-        }
-
-        // معالجة الأخطاء
-        function getErrorMsg(err) {
-            switch(err.code) {
-                case 1: return "تم رفض الإذن ❌";
-                case 2: return "الموقع غير متاح 🌐";
-                case 3: return "انتهى الوقت ⏳";
-                default: return "خطأ غير معروف";
-            }
-        }
-
-        function showError(msg) {
-            statusDiv.textContent = msg;
-            statusDiv.className = "error";
-        }
-    </script>
+    <div class="container">
+        <h1>مشاركة الموقع الجغرافي</h1>
+        <div id="status">جاري التهيئة...</div>
+        <div id="result"></div>
+    </div>
+    <script src="script.js"></script>
 </body>
 </html>
